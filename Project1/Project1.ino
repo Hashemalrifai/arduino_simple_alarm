@@ -104,7 +104,9 @@ void displayOutput() {
     strcpy(firstLine, "Disarmed");
   }
 
-  if (inputCount > 0) {
+  if (strcmp(status.errorMessage, "") != 0) { // has error
+    strcpy(secondLine, status.errorMessage);
+  } else if (inputCount > 0) {
     for (int i = 0; i < inputCount; i++) {
       strcat(secondLine, "*");
     }
@@ -135,9 +137,12 @@ void handleKeypad() {
         toggleAlarm();
       } else {
         beepError(io.buzzer);
+        strcpy(status.errorMessage, "Invalid PIN");
       }
 
       clearInput();
+    } else {
+      strcpy(status.errorMessage, "");
     }
   }
 }
