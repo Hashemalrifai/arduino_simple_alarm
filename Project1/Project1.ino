@@ -3,6 +3,11 @@
 #include "buzzer.h"
 #include <arduino.h>
 
+// -------------- Constants
+const int passwordLength = 4;
+const char password[passwordLength] = "1111";
+// -------------- End Constants
+
 // -------------- Keypad
 
 const byte ROWS = 4;
@@ -21,17 +26,14 @@ Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS)
 
 // -------------- End: Keypad
 
-// -------------- Password
-
-const int passwordLength = 4;
-const char password[passwordLength] = "1111";
+// -------------- User input
 char userInput[passwordLength];
 int inputCount = 0;
 
-// -------------- End: Password
+// -------------- End: User input
 
 // -------------- Display
-const int rs = 14, en = 9, d4 = 10, d5 = 11, d6 = 12, d7 = 13;
+const int rs = 14, en = 9, d4 = 10, d5 = 11, d6 = 12, d7 = 13, vo = 15;
 char latestFirstLine[16];
 char latestSecondLine[16];
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
@@ -58,8 +60,6 @@ struct {
   byte buzzer = 17;
 } io;
 
-const int logToSerial = 0;
-
 void setup() {
   Serial.begin(9600);
   pinMode(io.greenLed, OUTPUT);
@@ -70,8 +70,7 @@ void setup() {
   clearInput();
   setDisarmed();
 
-  analogWrite(15, 100);  // Generate PWM signal at pin D11, value of 100 (out of 255)
-
+  analogWrite(vo, 100);  // For LCD VO port, value of 100 (out of 255)
   lcd.begin(16, 2);
 }
 
@@ -106,6 +105,8 @@ void displayOutput() {
 
   if (strcmp(status.errorMessage, "") != 0) { // has error
     strcpy(secondLine, status.errorMessage);
+  } else if (status.isSirenOn) {
+    strcpy(secondLine, "Alarm!");
   } else if (inputCount > 0) {
     for (int i = 0; i < inputCount; i++) {
       strcat(secondLine, "*");
@@ -171,6 +172,8 @@ void setSirenOn() {
 }
 
 int isCorrectPassword() {
+  Serial.println(userInput);
+  Serial.println(password);
   return strcmp(userInput, password) == 0;
 }
 
@@ -213,10 +216,10 @@ void setGreen() {
 }
 
 void handleArming() {
-  if (status.armingCountDown == 0) {
+  if (status.armingCountDown == 0) { // ready to set armed
     setArmed();
   } else {
-    if (status.armingCountDown <= 5) {
+    if (status.armingCountDown <= 5) { // too close to be armed
       redOn();
       beepOn(io.buzzer);
       delay(200);
@@ -229,7 +232,7 @@ void handleArming() {
       redOff();
       beepOff(io.buzzer);
       delay(500);
-    } else {
+    } else { // arming but not too close
       redOn();
       beepOn(io.buzzer);
       delay(200);
